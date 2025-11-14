@@ -1,5 +1,4 @@
 from threading import local
-from pathlib import Path
 from django.conf import settings
 from django.db import connections
 from django.utils.deprecation import MiddlewareMixin
@@ -33,17 +32,15 @@ def ensure_tenant_for_user(user):
             return None
 
     alias = f"tenant_{admin.id}"
-    tenants_dir = Path(settings.BASE_DIR) / 'tenants'
-    tenants_dir.mkdir(exist_ok=True)
-    db_path = str(tenants_dir / f"{alias}.sqlite3")
+    schema_name = alias
 
     tenant, created = Tenant.objects.get_or_create(
         admin=admin,
-        defaults={'db_alias': alias, 'db_path': db_path}
+        defaults={'db_alias': alias, 'db_path': f"schema:{schema_name}"}
     )
-    if tenant.db_alias != alias or tenant.db_path != db_path:
+    if tenant.db_alias != alias or tenant.db_path != f"schema:{schema_name}":
         tenant.db_alias = alias
-        tenant.db_path = db_path
+        tenant.db_path = f"schema:{schema_name}"
         tenant.save()
 
     # Asegurar que el perfil del admin está vinculado al tenant
@@ -55,19 +52,32 @@ def ensure_tenant_for_user(user):
     except UserProfile.DoesNotExist:
         pass
 
-    # Register alias dynamically if missing
+    # Register alias dynamically for Postgres with per-tenant schema
     if alias not in settings.DATABASES:
+        default_db = settings.DATABASES['default']
         settings.DATABASES[alias] = {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': db_path,
-            # Añadir claves esperadas por Django para evitar KeyError
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': default_db['NAME'],
+            'USER': default_db['USER'],
+            'PASSWORD': default_db['PASSWORD'],
+            'HOST': default_db['HOST'],
+            'PORT': default_db['PORT'],
+            'OPTIONS': {
+                'options': f"-c search_path={schema_name} -c client_encoding=UTF8 -c lc_messages=C"
+            },
             'ATOMIC_REQUESTS': False,
             'AUTOCOMMIT': True,
             'CONN_MAX_AGE': 0,
-            'OPTIONS': {},
             'TIME_ZONE': settings.TIME_ZONE,
         }
         connections.databases = settings.DATABASES
+
+        # Ensure schema exists in the default database
+        try:
+            with connections['default'].cursor() as cursor:
+                cursor.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema_name}"')
+        except Exception:
+            pass
 
     # Initialize tables for tenant-routed models (example: PrivateNote)
     try:

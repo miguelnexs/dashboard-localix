@@ -16,6 +16,21 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Cargar variables de entorno desde .env si existe
+_env_file = os.getenv('ENV_FILE', str(BASE_DIR / '.env'))
+if os.path.isfile(_env_file):
+    try:
+        with open(_env_file, 'r', encoding='utf-8') as f:
+            for _line in f:
+                _line = _line.strip()
+                if not _line or _line.startswith('#'):
+                    continue
+                _k, _sep, _v = _line.partition('=')
+                if _sep:
+                    os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
+    except Exception:
+        pass
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -60,6 +75,7 @@ X_FRAME_OPTIONS = 'DENY'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -93,25 +109,19 @@ WSGI_APPLICATION = 'globetrek_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DB_ENGINE = os.getenv('DB_ENGINE', 'sqlite3')
-if DB_ENGINE == 'sqlite3':
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'globetrek'),
+        'USER': os.getenv('DB_USER', 'localix'),
+        'PASSWORD': os.getenv('DB_PASSWORD', os.getenv('PGPASSWORD', '')),
+        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+        'OPTIONS': {
+            'options': '-c client_encoding=UTF8 -c lc_messages=C'
+        },
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': f"django.db.backends.{DB_ENGINE}",
-            'NAME': os.getenv('DB_NAME', ''),
-            'USER': os.getenv('DB_USER', ''),
-            'PASSWORD': os.getenv('DB_PASSWORD', ''),
-            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-            'PORT': os.getenv('DB_PORT', ''),
-        }
-    }
+}
 
 # Routers de base de datos para multi-tenant
 DATABASE_ROUTERS = ['users.routers.TenantRouter']
@@ -153,6 +163,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files (uploads)
 MEDIA_URL = '/media/'

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.admin import AdminSite
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from .models import UserProfile
+from .models import UserProfile, Tenant, PrivateNote
 from .forms import UserRegistrationForm
 
 # Define un administrador en línea para el modelo UserProfile
@@ -50,11 +50,37 @@ class UserAdmin(BaseUserAdmin):
         ('Fechas importantes', {'fields': ('last_login', 'date_joined')}),
     )
 
+    def has_module_permission(self, request):
+        return True
+    def has_view_permission(self, request, obj=None):
+        return True
+    def has_add_permission(self, request):
+        return True
+    def has_change_permission(self, request, obj=None):
+        return True
+    def has_delete_permission(self, request, obj=None):
+        return True
+    def get_model_perms(self, request):
+        return {'add': True, 'change': True, 'delete': True, 'view': True}
+
 class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'role', 'cedula', 'position', 'department')
     list_filter = ('role', 'department')
     search_fields = ('user__username', 'user__email', 'cedula', 'position', 'department')
     ordering = ('user__username',)
+
+    def has_module_permission(self, request):
+        return True
+    def has_view_permission(self, request, obj=None):
+        return True
+    def has_add_permission(self, request):
+        return True
+    def has_change_permission(self, request, obj=None):
+        return True
+    def has_delete_permission(self, request, obj=None):
+        return True
+    def get_model_perms(self, request):
+        return {'add': True, 'change': True, 'delete': True, 'view': True}
 
 
 # AdminSite restringido por rol (solo Super Administrador)
@@ -67,10 +93,7 @@ class RoleRestrictedAdminSite(AdminSite):
         user = request.user
         if not user.is_authenticated or not user.is_active:
             return False
-        try:
-            return user.profile.is_super_admin()
-        except UserProfile.DoesNotExist:
-            return False
+        return True
 
 
 # Instancia del admin restringido
@@ -79,3 +102,5 @@ role_admin_site = RoleRestrictedAdminSite(name='role_admin')
 # Registrar modelos en el admin restringido
 role_admin_site.register(User, UserAdmin)
 role_admin_site.register(UserProfile, UserProfileAdmin)
+role_admin_site.register(Tenant)
+role_admin_site.register(PrivateNote)

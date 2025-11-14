@@ -1,31 +1,22 @@
-# Global
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Env files
+backend/.env
+.env
+
+# Django
+backend/staticfiles/
+backend/media/
+*.log
+
+# OS
 .DS_Store
 Thumbs.db
-*.log
-.env
-.env.*
 
-# Python/Django
-__pycache__/
-*.pyc
-.venv/
-venv/
-env/
-backend/db.sqlite3
-backend/media/
-
-# Node/Electron/Vite
-node_modules/
+# Node (if present)
 frontend/node_modules/
-tienda virtual/node_modules/
-frontend/out/
 frontend/dist/
-tienda virtual/dist/
-
-# Build artifacts
-dist/
-out/
-
-# IDE
-.vscode/
-.idea/
