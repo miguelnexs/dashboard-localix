@@ -19,6 +19,7 @@ from users.admin import role_admin_site
 from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
+from globetrek_backend.health import health
 
 urlpatterns = [
     path('admin/', role_admin_site.urls),
@@ -27,6 +28,7 @@ urlpatterns = [
     path('clients/', include('clients.urls')),
     path('sales/', include('sales.urls')),
     path('webconfig/', include('webconfig.urls')),
+    path('health/', health),
     path('', RedirectView.as_view(url='users/', permanent=True)),
 ]
 
